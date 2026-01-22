@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 
@@ -32,7 +32,12 @@ export async function getAccessMode(): Promise<'all' | 'whitelist'> {
 }
 
 export async function setAccessMode(mode: 'all' | 'whitelist') {
-  const supabase = await createClient()
+  // Verify caller is admin
+  if (!await checkIsAdmin()) {
+    throw new Error('Unauthorized')
+  }
+
+  const supabase = createServiceClient()
 
   const { error } = await supabase
     .from('app_settings')
@@ -56,8 +61,13 @@ export async function getAllowedUsers() {
 }
 
 export async function addAllowedUser(email: string) {
-  const supabase = await createClient()
+  // Verify caller is admin
+  if (!await checkIsAdmin()) {
+    throw new Error('Unauthorized')
+  }
+
   const adminEmail = await getCurrentUserEmail()
+  const supabase = createServiceClient()
 
   const { error } = await supabase
     .from('allowed_users')
@@ -74,7 +84,12 @@ export async function addAllowedUser(email: string) {
 }
 
 export async function removeAllowedUser(id: string) {
-  const supabase = await createClient()
+  // Verify caller is admin
+  if (!await checkIsAdmin()) {
+    throw new Error('Unauthorized')
+  }
+
+  const supabase = createServiceClient()
 
   const { error } = await supabase
     .from('allowed_users')

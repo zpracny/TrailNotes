@@ -4,7 +4,11 @@
       "Bash(npm init:*)",
       "Bash(npm install)",
       "Bash(npm run build:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix TypeScript error for optional animate property\n\nUse ''in'' operator to check if animate property exists before accessing\nit, fixing union type error where animate only exists on processing status.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

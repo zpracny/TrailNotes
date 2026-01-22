@@ -329,7 +329,7 @@ export default function VoiceNotesPage() {
                     <div className="flex-1 min-w-0">
                       {/* Status badge */}
                       <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color} mb-3`}>
-                        <StatusIcon className={`w-3.5 h-3.5 ${status.animate ? 'animate-spin' : ''}`} />
+                        <StatusIcon className={`w-3.5 h-3.5 ${'animate' in status && status.animate ? 'animate-spin' : ''}`} />
                         {status.label}
                       </div>
 

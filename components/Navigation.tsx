@@ -16,12 +16,16 @@ import {
   Mountain,
   Shield,
   Link2,
+  CreditCard,
+  Mic,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard', label: 'Přehled', icon: LayoutDashboard },
   { href: '/ideas', label: 'Nápady', icon: Lightbulb },
   { href: '/deployments', label: 'Služby', icon: Server },
+  { href: '/subscriptions', label: 'Předplatné', icon: CreditCard },
+  { href: '/voice-notes', label: 'Hlas', icon: Mic },
   { href: '/links', label: 'Odkazy', icon: Link2 },
 ]
 

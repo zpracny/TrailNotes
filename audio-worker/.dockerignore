@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Environment (nikdy nekopíruj do image!)
+.env
+.env.local
+.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Docs
+README.md
+*.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

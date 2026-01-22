@@ -1,0 +1,11 @@
+# Supabase client
+supabase>=2.0.0
+
+# OpenAI Whisper
+openai-whisper>=20231117
+
+# Audio processing (dependency of whisper)
+ffmpeg-python>=0.2.0
+
+# Additional utilities
+python-dotenv>=1.0.0

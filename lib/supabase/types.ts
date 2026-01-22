@@ -9,6 +9,11 @@ export type Json =
 export type IdeaStatus = 'todo' | 'in-progress' | 'done'
 export type DeploymentStatus = 'running' | 'stopped' | 'error'
 export type Platform = 'AWS Lambda' | 'n8n' | 'Raspberry Pi' | 'Docker' | 'Vercel' | 'EC2'
+export type Currency = 'CZK' | 'EUR' | 'USD'
+export type Frequency = 'monthly' | 'yearly'
+export type PaymentType = 'automatic' | 'manual'
+export type Priority = 1 | 2 | 3
+export type AudioNoteStatus = 'pending' | 'processing' | 'done' | 'error'
 
 export interface Database {
   public: {
@@ -92,9 +97,98 @@ export interface Database {
           created_at?: string
         }
       }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          created_at: string
+          name: string
+          amount: number
+          currency: Currency
+          frequency: Frequency
+          category: string | null
+          next_billing_date: string | null
+          payment_type: PaymentType
+          priority: Priority
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          created_at?: string
+          name: string
+          amount: number
+          currency?: Currency
+          frequency: Frequency
+          category?: string | null
+          next_billing_date?: string | null
+          payment_type: PaymentType
+          priority?: Priority
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          created_at?: string
+          name?: string
+          amount?: number
+          currency?: Currency
+          frequency?: Frequency
+          category?: string | null
+          next_billing_date?: string | null
+          payment_type?: PaymentType
+          priority?: Priority
+          is_active?: boolean
+        }
+      }
+      audio_notes: {
+        Row: {
+          id: string
+          user_id: string
+          created_at: string
+          audio_path: string
+          transcription: string | null
+          status: AudioNoteStatus
+          error_message: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          created_at?: string
+          audio_path: string
+          transcription?: string | null
+          status?: AudioNoteStatus
+          error_message?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          created_at?: string
+          audio_path?: string
+          transcription?: string | null
+          status?: AudioNoteStatus
+          error_message?: string | null
+        }
+      }
     }
     Views: {
-      [_ in never]: never
+      subscriptions_overview: {
+        Row: {
+          id: string
+          user_id: string
+          created_at: string
+          name: string
+          amount: number
+          currency: Currency
+          frequency: Frequency
+          category: string | null
+          next_billing_date: string | null
+          payment_type: PaymentType
+          priority: Priority
+          is_active: boolean
+          monthly_cost_czk: number
+        }
+      }
     }
     Functions: {
       [_ in never]: never
@@ -132,3 +226,12 @@ export interface Link {
   tags: string[]
   created_at: string
 }
+
+export type Subscription = Database['public']['Tables']['subscriptions']['Row']
+export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert']
+export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update']
+export type SubscriptionOverview = Database['public']['Views']['subscriptions_overview']['Row']
+
+export type AudioNote = Database['public']['Tables']['audio_notes']['Row']
+export type AudioNoteInsert = Database['public']['Tables']['audio_notes']['Insert']
+export type AudioNoteUpdate = Database['public']['Tables']['audio_notes']['Update']

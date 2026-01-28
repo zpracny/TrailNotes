@@ -1,17 +1,14 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { createSubscription, updateSubscription } from '@/actions/subscriptions'
+import { getSubscriptionsOverview, createSubscription, updateSubscription } from '@/actions/subscriptions'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import type { SubscriptionOverview, Currency, Frequency, PaymentType, Priority } from '@/lib/supabase/types'
 import {
   Plus,
   CreditCard,
   RefreshCw,
-  TrendingUp,
   X,
-  ChevronDown,
   Filter,
 } from 'lucide-react'
 
@@ -30,39 +27,19 @@ export default function SubscriptionsPage() {
   const [filterCategory, setFilterCategory] = useState<string>('')
 
   const fetchSubscriptions = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('subscriptions_overview')
-      .select('*')
-      .order('priority', { ascending: true })
-      .order('monthly_cost_czk', { ascending: false })
-
-    if (data) setSubscriptions(data)
+    const data = await getSubscriptionsOverview()
+    setSubscriptions(data)
     setLoading(false)
   }
 
   useEffect(() => {
     fetchSubscriptions()
-
-    const supabase = createClient()
-    const channel = supabase
-      .channel('subscriptions_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'subscriptions' },
-        () => fetchSubscriptions()
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
   }, [])
 
   const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter(s => {
       // Active filter
-      if (!showInactive && !s.is_active) return false
+      if (!showInactive && !s.isActive) return false
       // Priority filter
       if (filterPriorities.length > 0 && !filterPriorities.includes(s.priority)) return false
       // Category filter
@@ -81,11 +58,11 @@ export default function SubscriptionsPage() {
   }, [subscriptions])
 
   const stats = useMemo(() => {
-    const active = subscriptions.filter(s => s.is_active)
+    const active = subscriptions.filter(s => s.isActive)
     return {
       totalMonthly: active.reduce((sum, s) => sum + (s.monthly_cost_czk || 0), 0),
       automaticMonthly: active
-        .filter(s => s.payment_type === 'automatic')
+        .filter(s => s.paymentType === 'automatic')
         .reduce((sum, s) => sum + (s.monthly_cost_czk || 0), 0),
       totalCount: subscriptions.length,
       activeCount: active.length,
@@ -94,7 +71,7 @@ export default function SubscriptionsPage() {
 
   const filteredTotal = useMemo(() => {
     return filteredSubscriptions
-      .filter(s => s.is_active)
+      .filter(s => s.isActive)
       .reduce((sum, s) => sum + (s.monthly_cost_czk || 0), 0)
   }, [filteredSubscriptions])
 
@@ -115,6 +92,7 @@ export default function SubscriptionsPage() {
       await createSubscription(formData)
     }
 
+    await fetchSubscriptions()
     setIsSubmitting(false)
     handleCloseForm()
   }
@@ -367,7 +345,7 @@ export default function SubscriptionsPage() {
                   <select
                     name="payment_type"
                     required
-                    defaultValue={editingSubscription?.payment_type || 'automatic'}
+                    defaultValue={editingSubscription?.paymentType || 'automatic'}
                     className="w-full px-4 py-2.5 bg-trail-bg border border-trail-border rounded-lg text-trail-text focus:ring-2 focus:ring-trail-accent focus:border-transparent"
                   >
                     <option value="automatic">Automaticky</option>
@@ -429,7 +407,7 @@ export default function SubscriptionsPage() {
                 <input
                   type="date"
                   name="next_billing_date"
-                  defaultValue={editingSubscription?.next_billing_date || ''}
+                  defaultValue={editingSubscription?.nextBillingDate || ''}
                   className="w-full px-4 py-2.5 bg-trail-bg border border-trail-border rounded-lg text-trail-text focus:ring-2 focus:ring-trail-accent focus:border-transparent"
                 />
               </div>

@@ -1,70 +1,55 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import type { AudioNoteInsert } from '@/lib/supabase/types'
+import { db } from '@/lib/db'
+import { audioNotes } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { requireUser } from '@/lib/auth/server'
 
 export async function createAudioNote(audioPath: string) {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const note: AudioNoteInsert = {
-    user_id: user.id,
-    audio_path: audioPath,
-    status: 'pending',
-  }
-
-  const { data, error } = await supabase
-    .from('audio_notes')
-    .insert(note)
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
+  const [data] = await db
+    .insert(audioNotes)
+    .values({
+      userId: user.id,
+      audioPath,
+      status: 'pending',
+    })
+    .returning()
 
   revalidatePath('/voice-notes')
   return data
 }
 
 export async function getAudioNotes(limit: number = 10) {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('audio_notes')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const data = await db
+    .select()
+    .from(audioNotes)
+    .where(eq(audioNotes.userId, user.id))
+    .orderBy(desc(audioNotes.createdAt))
     .limit(limit)
 
-  if (error) throw new Error(error.message)
   return data
 }
 
 export async function deleteAudioNote(id: string) {
-  const supabase = await createClient()
+  // Get audio_path for storage deletion
+  const [note] = await db
+    .select({ audioPath: audioNotes.audioPath })
+    .from(audioNotes)
+    .where(eq(audioNotes.id, id))
+    .limit(1)
 
-  // Získej audio_path pro smazání ze storage
-  const { data: note } = await supabase
-    .from('audio_notes')
-    .select('audio_path')
-    .eq('id', id)
-    .single()
+  // TODO: Delete file from Vercel Blob storage
+  // if (note?.audioPath) {
+  //   await del(note.audioPath)
+  // }
 
-  // Smaž soubor ze storage (pokud existuje)
-  if (note?.audio_path) {
-    await supabase.storage
-      .from('audio-uploads')
-      .remove([note.audio_path])
-  }
-
-  // Smaž záznam z DB
-  const { error } = await supabase
-    .from('audio_notes')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  // Delete record from DB
+  await db.delete(audioNotes).where(eq(audioNotes.id, id))
 
   revalidatePath('/voice-notes')
 }

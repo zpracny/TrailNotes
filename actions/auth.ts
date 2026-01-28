@@ -2,37 +2,20 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
-
-export async function signInWithGoogle(): Promise<{ url?: string; error?: string }> {
-  const supabase = await createClient()
-  const headersList = await headers()
-  const origin = headersList.get('origin') || 'http://localhost:3000'
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${origin}/auth/callback`,
-    },
-  })
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  return { url: data.url }
-}
+import { getUser as getAuthUser } from '@/lib/auth/server'
 
 export async function signOut() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  // Neon Auth handles sign out on client side
+  // This is just for server-side cleanup if needed
   revalidatePath('/', 'layout')
-  redirect('/login')
+  redirect('/auth/sign-in')
 }
 
 export async function getUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  return await getAuthUser()
+}
+
+export async function getUserId(): Promise<string | null> {
+  const user = await getAuthUser()
+  return user?.id ?? null
 }

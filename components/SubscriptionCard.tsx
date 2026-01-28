@@ -34,7 +34,7 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
 
   const handleToggleActive = async () => {
     setIsToggling(true)
-    await toggleSubscriptionActive(subscription.id, !subscription.is_active)
+    await toggleSubscriptionActive(subscription.id, !subscription.isActive)
     setIsToggling(false)
   }
 
@@ -45,7 +45,8 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
   }
 
   const formatOriginalPrice = () => {
-    const symbol = currencySymbols[subscription.currency] || subscription.currency
+    const currency = subscription.currency ?? 'CZK'
+    const symbol = currencySymbols[currency] || currency
     const freq = subscription.frequency === 'yearly' ? '/rok' : '/měs'
     return `${subscription.amount} ${symbol}${freq}`
   }
@@ -60,8 +61,8 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
   }
 
   const isExpiringSoon = () => {
-    if (!subscription.next_billing_date) return false
-    const date = new Date(subscription.next_billing_date)
+    if (!subscription.nextBillingDate) return false
+    const date = new Date(subscription.nextBillingDate)
     const now = new Date()
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     return diffDays <= 7 && diffDays >= 0
@@ -71,13 +72,13 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
     <div
       className={`bg-trail-card rounded-xl p-4 shadow-md transition-all ${
         priorityStyles[subscription.priority as 1 | 2 | 3]
-      } ${!subscription.is_active ? 'opacity-50' : ''}`}
+      } ${!subscription.isActive ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-trail-text truncate">{subscription.name}</h3>
-            {subscription.payment_type === 'automatic' && (
+            {subscription.paymentType === 'automatic' && (
               <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full text-xs">
                 <RefreshCw className="w-3 h-3" />
                 Auto
@@ -100,12 +101,12 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
             </div>
           </div>
 
-          {subscription.next_billing_date && (
+          {subscription.nextBillingDate && (
             <div className={`flex items-center gap-1 mt-2 text-xs ${
               isExpiringSoon() ? 'text-amber-400' : 'text-trail-muted'
             }`}>
               <Calendar className="w-3 h-3" />
-              {formatDate(subscription.next_billing_date)}
+              {formatDate(subscription.nextBillingDate)}
               {isExpiringSoon() && <span className="font-medium">(brzy!)</span>}
             </div>
           )}
@@ -138,11 +139,11 @@ export function SubscriptionCard({ subscription, onEdit }: SubscriptionCardProps
           onClick={handleToggleActive}
           disabled={isToggling}
           className={`p-1.5 rounded transition-colors ${
-            subscription.is_active
+            subscription.isActive
               ? 'hover:bg-amber-600/30 text-trail-muted hover:text-amber-400'
               : 'hover:bg-emerald-600/30 text-trail-muted hover:text-emerald-400'
           } disabled:opacity-50`}
-          title={subscription.is_active ? 'Deaktivovat' : 'Aktivovat'}
+          title={subscription.isActive ? 'Deaktivovat' : 'Aktivovat'}
         >
           <Power className="w-4 h-4" />
         </button>

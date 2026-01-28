@@ -23,8 +23,8 @@ import {
 type AllowedUser = {
   id: string
   email: string
-  added_by: string | null
-  created_at: string
+  addedBy: string | null
+  createdAt: Date | null
 }
 
 export default function AdminPage() {
@@ -229,8 +229,8 @@ export default function AdminPage() {
                 <div>
                   <p className="text-trail-text">{user.email}</p>
                   <p className="text-xs text-trail-muted">
-                    Přidáno: {new Date(user.created_at).toLocaleDateString('cs-CZ')}
-                    {user.added_by && ` • ${user.added_by}`}
+                    Přidáno: {user.createdAt ? new Date(user.createdAt).toLocaleDateString('cs-CZ') : '-'}
+                    {user.addedBy && ` • ${user.addedBy}`}
                   </p>
                 </div>
                 <button

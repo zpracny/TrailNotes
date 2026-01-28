@@ -1,7 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { appSettings, allowedUsers } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { getUser } from '@/lib/auth/server'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 
@@ -10,8 +13,7 @@ export async function isAdmin(email: string | undefined): Promise<boolean> {
 }
 
 export async function getCurrentUserEmail(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUser()
   return user?.email || null
 }
 
@@ -21,82 +23,79 @@ export async function checkIsAdmin(): Promise<boolean> {
 }
 
 export async function getAccessMode(): Promise<'all' | 'whitelist'> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('app_settings')
-    .select('value')
-    .eq('key', 'access_mode')
-    .single()
+  const [data] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, 'access_mode'))
+    .limit(1)
 
   return (data?.value as 'all' | 'whitelist') || 'all'
 }
 
 export async function setAccessMode(mode: 'all' | 'whitelist') {
-  // Verify caller is admin
   if (!await checkIsAdmin()) {
     throw new Error('Unauthorized')
   }
 
-  const supabase = createServiceClient()
+  // Upsert - update if exists, insert if not
+  const [existing] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, 'access_mode'))
+    .limit(1)
 
-  const { error } = await supabase
-    .from('app_settings')
-    .upsert({ key: 'access_mode', value: mode, updated_at: new Date().toISOString() })
-
-  if (error) throw new Error(error.message)
+  if (existing) {
+    await db
+      .update(appSettings)
+      .set({ value: mode, updatedAt: new Date() })
+      .where(eq(appSettings.key, 'access_mode'))
+  } else {
+    await db.insert(appSettings).values({
+      key: 'access_mode',
+      value: mode,
+    })
+  }
 
   revalidatePath('/admin')
 }
 
 export async function getAllowedUsers() {
-  const supabase = await createClient()
+  const data = await db
+    .select()
+    .from(allowedUsers)
+    .orderBy(desc(allowedUsers.createdAt))
 
-  const { data, error } = await supabase
-    .from('allowed_users')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
-  return data || []
+  return data
 }
 
 export async function addAllowedUser(email: string) {
-  // Verify caller is admin
   if (!await checkIsAdmin()) {
     throw new Error('Unauthorized')
   }
 
   const adminEmail = await getCurrentUserEmail()
-  const supabase = createServiceClient()
 
-  const { error } = await supabase
-    .from('allowed_users')
-    .insert({ email: email.toLowerCase(), added_by: adminEmail })
-
-  if (error) {
-    if (error.code === '23505') {
+  try {
+    await db.insert(allowedUsers).values({
+      email: email.toLowerCase(),
+      addedBy: adminEmail,
+    })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('duplicate')) {
       throw new Error('Tento email už je v seznamu')
     }
-    throw new Error(error.message)
+    throw error
   }
 
   revalidatePath('/admin')
 }
 
 export async function removeAllowedUser(id: string) {
-  // Verify caller is admin
   if (!await checkIsAdmin()) {
     throw new Error('Unauthorized')
   }
 
-  const supabase = createServiceClient()
-
-  const { error } = await supabase
-    .from('allowed_users')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db.delete(allowedUsers).where(eq(allowedUsers.id, id))
 
   revalidatePath('/admin')
 }
@@ -113,12 +112,11 @@ export async function isUserAllowed(email: string | undefined): Promise<boolean>
   if (accessMode === 'all') return true
 
   // Jinak kontrola whitelistu
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('allowed_users')
-    .select('id')
-    .eq('email', email.toLowerCase())
-    .single()
+  const [data] = await db
+    .select({ id: allowedUsers.id })
+    .from(allowedUsers)
+    .where(eq(allowedUsers.email, email.toLowerCase()))
+    .limit(1)
 
   return !!data
 }

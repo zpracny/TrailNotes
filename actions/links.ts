@@ -1,97 +1,84 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import type { LinkCategory, Link } from '@/lib/supabase/types'
+import { db } from '@/lib/db'
+import { linkCategories, links } from '@/lib/db/schema'
+import { eq, desc, asc } from 'drizzle-orm'
+import { requireUser } from '@/lib/auth/server'
+import type { LinkCategory, Link } from '@/lib/db/schema'
 
 // ============================================
 // CATEGORIES
 // ============================================
 
 export async function getCategories(): Promise<LinkCategory[]> {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('link_categories')
-    .select('*')
-    .order('sort_order', { ascending: true })
-
-  if (error) throw new Error(error.message)
-  return data || []
-}
-
-export async function createCategory(name: string, icon: string = '📁'): Promise<LinkCategory> {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  // Get max sort_order
-  const { data: categories } = await supabase
-    .from('link_categories')
-    .select('sort_order')
-    .order('sort_order', { ascending: false })
-    .limit(1)
-
-  const maxOrder = categories?.[0]?.sort_order ?? -1
-
-  const { data, error } = await supabase
-    .from('link_categories')
-    .insert({
-      user_id: user.id,
-      name,
-      icon,
-      sort_order: maxOrder + 1,
-    })
+  const data = await db
     .select()
-    .single()
+    .from(linkCategories)
+    .where(eq(linkCategories.userId, user.id))
+    .orderBy(asc(linkCategories.sortOrder))
 
-  if (error) {
-    if (error.code === '23505') {
-      throw new Error('Kategorie s tímto názvem již existuje')
-    }
-    throw new Error(error.message)
-  }
-
-  revalidatePath('/links')
   return data
 }
 
+export async function createCategory(name: string, icon: string = '📁'): Promise<LinkCategory> {
+  const user = await requireUser()
+
+  // Get max sort_order
+  const [maxOrderResult] = await db
+    .select({ sortOrder: linkCategories.sortOrder })
+    .from(linkCategories)
+    .where(eq(linkCategories.userId, user.id))
+    .orderBy(desc(linkCategories.sortOrder))
+    .limit(1)
+
+  const maxOrder = maxOrderResult?.sortOrder ?? -1
+
+  try {
+    const [data] = await db
+      .insert(linkCategories)
+      .values({
+        userId: user.id,
+        name,
+        icon,
+        sortOrder: maxOrder + 1,
+      })
+      .returning()
+
+    revalidatePath('/links')
+    return data
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('duplicate')) {
+      throw new Error('Kategorie s tímto názvem již existuje')
+    }
+    throw error
+  }
+}
+
 export async function updateCategory(id: string, name: string, icon: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('link_categories')
-    .update({ name, icon })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(linkCategories)
+    .set({ name, icon })
+    .where(eq(linkCategories.id, id))
 
   revalidatePath('/links')
 }
 
 export async function deleteCategory(id: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('link_categories')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db.delete(linkCategories).where(eq(linkCategories.id, id))
 
   revalidatePath('/links')
 }
 
 export async function reorderCategories(categoryIds: string[]) {
-  const supabase = await createClient()
-
   // Update sort_order for each category
   for (let i = 0; i < categoryIds.length; i++) {
-    await supabase
-      .from('link_categories')
-      .update({ sort_order: i })
-      .eq('id', categoryIds[i])
+    await db
+      .update(linkCategories)
+      .set({ sortOrder: i })
+      .where(eq(linkCategories.id, categoryIds[i]))
   }
 
   revalidatePath('/links')
@@ -102,33 +89,36 @@ export async function reorderCategories(categoryIds: string[]) {
 // ============================================
 
 export async function getLinks(categoryId?: string): Promise<Link[]> {
-  const supabase = await createClient()
-
-  let query = supabase
-    .from('links')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const user = await requireUser()
 
   if (categoryId) {
-    query = query.eq('category_id', categoryId)
+    const data = await db
+      .select()
+      .from(links)
+      .where(eq(links.categoryId, categoryId))
+      .orderBy(desc(links.createdAt))
+    return data
   }
 
-  const { data, error } = await query
+  const data = await db
+    .select()
+    .from(links)
+    .where(eq(links.userId, user.id))
+    .orderBy(desc(links.createdAt))
 
-  if (error) throw new Error(error.message)
-  return data || []
+  return data
 }
 
 export async function getAllLinks(): Promise<Link[]> {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('links')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const data = await db
+    .select()
+    .from(links)
+    .where(eq(links.userId, user.id))
+    .orderBy(desc(links.createdAt))
 
-  if (error) throw new Error(error.message)
-  return data || []
+  return data
 }
 
 export async function createLink(
@@ -138,10 +128,7 @@ export async function createLink(
   description?: string,
   tags?: string[]
 ): Promise<Link> {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const user = await requireUser()
 
   // Ensure URL has protocol
   let finalUrl = url.trim()
@@ -149,20 +136,17 @@ export async function createLink(
     finalUrl = 'https://' + finalUrl
   }
 
-  const { data, error } = await supabase
-    .from('links')
-    .insert({
-      user_id: user.id,
+  const [data] = await db
+    .insert(links)
+    .values({
+      userId: user.id,
       title,
       url: finalUrl,
-      category_id: categoryId,
+      categoryId,
       description: description || null,
       tags: tags || [],
     })
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
+    .returning()
 
   revalidatePath('/links')
   return data
@@ -176,51 +160,36 @@ export async function updateLink(
   description?: string,
   tags?: string[]
 ) {
-  const supabase = await createClient()
-
   let finalUrl = url.trim()
   if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
     finalUrl = 'https://' + finalUrl
   }
 
-  const { error } = await supabase
-    .from('links')
-    .update({
+  await db
+    .update(links)
+    .set({
       title,
       url: finalUrl,
-      category_id: categoryId,
+      categoryId,
       description: description || null,
       tags: tags || [],
     })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+    .where(eq(links.id, id))
 
   revalidatePath('/links')
 }
 
 export async function deleteLink(id: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('links')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db.delete(links).where(eq(links.id, id))
 
   revalidatePath('/links')
 }
 
 export async function updateLinkTags(id: string, tags: string[]) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('links')
-    .update({ tags })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(links)
+    .set({ tags })
+    .where(eq(links.id, id))
 
   revalidatePath('/links')
 }

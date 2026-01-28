@@ -30,7 +30,7 @@ export default function EditDeploymentPage({ params }: { params: Promise<{ id: s
     const loadDeployment = async () => {
       const data = await getDeployment(id)
       setDeployment(data)
-      setSelectedPlatform(data.platform || '')
+      setSelectedPlatform((data.platform as Platform) || '')
     }
     loadDeployment()
   }, [id])
@@ -142,7 +142,7 @@ export default function EditDeploymentPage({ params }: { params: Promise<{ id: s
               type="text"
               id="url_ip"
               name="url_ip"
-              defaultValue={deployment.url_ip || ''}
+              defaultValue={deployment.urlIp || ''}
               className="w-full px-4 py-2.5 bg-trail-bg border border-trail-border rounded-lg text-trail-text placeholder-trail-muted focus:ring-2 focus:ring-trail-accent focus:border-transparent font-mono"
             />
           </div>
@@ -154,7 +154,7 @@ export default function EditDeploymentPage({ params }: { params: Promise<{ id: s
             <select
               id="status"
               name="status"
-              defaultValue={deployment.status}
+              defaultValue={deployment.status ?? 'running'}
               className="w-full px-4 py-2.5 bg-trail-bg border border-trail-border rounded-lg text-trail-text focus:ring-2 focus:ring-trail-accent focus:border-transparent"
             >
               <option value="running">🟢 Běží</option>

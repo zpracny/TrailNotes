@@ -1,84 +1,73 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import type { IdeaInsert, IdeaUpdate, IdeaStatus } from '@/lib/supabase/types'
+import { db } from '@/lib/db'
+import { ideas } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { requireUser } from '@/lib/auth/server'
+
+export type IdeaStatus = 'todo' | 'in-progress' | 'done'
 
 export async function getIdeas() {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('ideas')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const data = await db
+    .select()
+    .from(ideas)
+    .where(eq(ideas.userId, user.id))
+    .orderBy(desc(ideas.createdAt))
 
-  if (error) throw new Error(error.message)
   return data
 }
 
 export async function getIdea(id: string) {
-  const supabase = await createClient()
+  const [data] = await db
+    .select()
+    .from(ideas)
+    .where(eq(ideas.id, id))
+    .limit(1)
 
-  const { data, error } = await supabase
-    .from('ideas')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) throw new Error(error.message)
+  if (!data) throw new Error('Idea not found')
   return data
 }
 
 export async function createIdea(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const user = await requireUser()
 
   const title = formData.get('title') as string
   const description = formData.get('description') as string | null
   const tagsString = formData.get('tags') as string | null
-  const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(Boolean) : null
+  const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(Boolean) : []
 
-  const idea: IdeaInsert = {
-    user_id: user.id,
+  await db.insert(ideas).values({
+    userId: user.id,
     title,
     description,
     tags,
     status: 'todo',
-  }
-
-  const { error } = await supabase.from('ideas').insert(idea)
-
-  if (error) throw new Error(error.message)
+  })
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
 }
 
 export async function updateIdea(id: string, formData: FormData) {
-  const supabase = await createClient()
-
   const title = formData.get('title') as string
   const description = formData.get('description') as string | null
   const tagsString = formData.get('tags') as string | null
   const status = formData.get('status') as IdeaStatus
-  const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(Boolean) : null
+  const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(Boolean) : []
 
-  const update: IdeaUpdate = {
-    title,
-    description,
-    tags,
-    status,
-    updated_at: new Date().toISOString(),
-  }
-
-  const { error } = await supabase
-    .from('ideas')
-    .update(update)
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(ideas)
+    .set({
+      title,
+      description,
+      tags,
+      status,
+      updatedAt: new Date(),
+    })
+    .where(eq(ideas.id, id))
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
@@ -86,69 +75,49 @@ export async function updateIdea(id: string, formData: FormData) {
 }
 
 export async function updateIdeaStatus(id: string, status: IdeaStatus) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('ideas')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(ideas)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(ideas.id, id))
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
 }
 
 export async function deleteIdea(id: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('ideas')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db.delete(ideas).where(eq(ideas.id, id))
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
 }
 
 export async function updateIdeaTags(id: string, tags: string[]) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('ideas')
-    .update({ tags, updated_at: new Date().toISOString() })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(ideas)
+    .set({ tags, updatedAt: new Date() })
+    .where(eq(ideas.id, id))
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
 }
 
 export async function updateIdeaLinks(id: string, links: string[]) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('ideas')
-    .update({ links, updated_at: new Date().toISOString() })
-    .eq('id', id)
-
-  if (error) throw new Error(error.message)
+  await db
+    .update(ideas)
+    .set({ links, updatedAt: new Date() })
+    .where(eq(ideas.id, id))
 
   revalidatePath('/ideas')
   revalidatePath('/dashboard')
 }
 
 export async function getIdeasStats() {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('ideas')
-    .select('status')
-
-  if (error) throw new Error(error.message)
+  const data = await db
+    .select({ status: ideas.status })
+    .from(ideas)
+    .where(eq(ideas.userId, user.id))
 
   return {
     total: data.length,
@@ -159,14 +128,13 @@ export async function getIdeasStats() {
 }
 
 export async function exportIdeasCSV() {
-  const supabase = await createClient()
+  const user = await requireUser()
 
-  const { data, error } = await supabase
-    .from('ideas')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
+  const data = await db
+    .select()
+    .from(ideas)
+    .where(eq(ideas.userId, user.id))
+    .orderBy(desc(ideas.createdAt))
 
   const headers = ['Title', 'Description', 'Tags', 'Status', 'Created At']
   const rows = data.map(idea => [
@@ -174,7 +142,7 @@ export async function exportIdeasCSV() {
     idea.description || '',
     (idea.tags || []).join('; '),
     idea.status,
-    new Date(idea.created_at).toLocaleDateString(),
+    idea.createdAt ? new Date(idea.createdAt).toLocaleDateString() : '',
   ])
 
   const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')

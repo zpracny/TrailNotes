@@ -38,7 +38,7 @@ export function IdeaCard({ idea, showDragHandle = false }: IdeaCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-2">
             <h3 className="font-semibold text-trail-text truncate">{idea.title}</h3>
-            <StatusBadge status={idea.status} type="idea" />
+            <StatusBadge status={(idea.status as IdeaStatus) ?? 'todo'} type="idea" />
           </div>
 
           {idea.description && (
@@ -64,7 +64,7 @@ export function IdeaCard({ idea, showDragHandle = false }: IdeaCardProps) {
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-trail-border/30">
             <div className="flex gap-1">
               <select
-                value={idea.status}
+                value={idea.status ?? 'todo'}
                 onChange={(e) => handleStatusChange(e.target.value as IdeaStatus)}
                 className="text-xs bg-trail-bg border border-trail-border rounded px-2 py-1 text-trail-text focus:outline-none focus:ring-1 focus:ring-trail-accent"
               >

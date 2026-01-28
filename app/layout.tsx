@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { NeonAuthUIProvider } from '@neondatabase/auth/react'
+import { authClient } from '@/lib/auth/client'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,9 +22,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-trail-bg min-h-screen`}>
-        {children}
+        <NeonAuthUIProvider authClient={authClient} redirectTo="/" social={{ providers: ['google'] }}>
+          {children}
+        </NeonAuthUIProvider>
       </body>
     </html>
   )

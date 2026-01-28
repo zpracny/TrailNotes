@@ -1,12 +1,19 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { neonAuthMiddleware } from '@neondatabase/auth/next/server'
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request)
-}
+export default neonAuthMiddleware({
+  loginUrl: '/auth/sign-in',
+})
 
 export const config = {
+  // Protect all routes under (protected) group
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/(protected)/:path*',
+    '/dashboard/:path*',
+    '/ideas/:path*',
+    '/deployments/:path*',
+    '/links/:path*',
+    '/subscriptions/:path*',
+    '/voice-notes/:path*',
+    '/admin/:path*',
   ],
 }

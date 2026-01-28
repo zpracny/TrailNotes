@@ -77,11 +77,11 @@ export default function DeploymentsPage() {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name)
       } else if (sortBy === 'last_ping') {
-        const aTime = a.last_ping ? new Date(a.last_ping).getTime() : 0
-        const bTime = b.last_ping ? new Date(b.last_ping).getTime() : 0
+        const aTime = a.lastPing ? new Date(a.lastPing).getTime() : 0
+        const bTime = b.lastPing ? new Date(b.lastPing).getTime() : 0
         return bTime - aTime
       } else {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
       }
     })
 

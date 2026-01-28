@@ -125,7 +125,7 @@ export default function EditIdeaPage({ params }: { params: Promise<{ id: string 
             <select
               id="status"
               name="status"
-              defaultValue={idea.status}
+              defaultValue={idea.status ?? 'todo'}
               className="w-full px-4 py-2.5 bg-trail-bg border border-trail-border rounded-lg text-trail-text focus:ring-2 focus:ring-trail-accent focus:border-transparent"
             >
               <option value="todo">K řešení</option>

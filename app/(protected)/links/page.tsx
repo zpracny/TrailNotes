@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState, useCallback } from 'react'
 import { TagsEditor } from '@/components/TagsEditor'
 import {
   getCategories,
@@ -55,28 +54,6 @@ export default function LinksPage() {
 
   useEffect(() => {
     loadData()
-
-    const supabase = createClient()
-
-    // Realtime subscriptions
-    const categoriesChannel = supabase
-      .channel('link_categories_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'link_categories' }, () => {
-        loadCategories()
-      })
-      .subscribe()
-
-    const linksChannel = supabase
-      .channel('links_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
-        loadLinks()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(categoriesChannel)
-      supabase.removeChannel(linksChannel)
-    }
   }, [])
 
   useEffect(() => {
@@ -128,7 +105,7 @@ export default function LinksPage() {
       setLinkTitle(link.title)
       setLinkUrl(link.url)
       setLinkDescription(link.description || '')
-      setLinkCategoryId(link.category_id)
+      setLinkCategoryId(link.categoryId)
     } else {
       setEditingLink(null)
       setLinkTitle('')
@@ -225,7 +202,7 @@ export default function LinksPage() {
                       e.stopPropagation()
                       setEditingCategory(category)
                       setNewCategoryName(category.name)
-                      setNewCategoryIcon(category.icon)
+                      setNewCategoryIcon(category.icon ?? '📁')
                     }}
                     className="p-1 rounded hover:bg-trail-border/50 text-trail-muted hover:text-trail-text"
                   >
@@ -298,7 +275,7 @@ export default function LinksPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredLinks.map(link => {
-              const category = getCategoryById(link.category_id)
+              const category = getCategoryById(link.categoryId)
               return (
                 <div
                   key={link.id}

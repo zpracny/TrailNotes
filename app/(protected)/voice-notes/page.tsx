@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { createAudioNote, deleteAudioNote } from '@/actions/audio'
+import { getAudioNotes, createAudioNote, deleteAudioNote } from '@/actions/audio'
 import type { AudioNote } from '@/lib/supabase/types'
 import {
   Mic,
@@ -58,51 +57,20 @@ export default function VoiceNotesPage() {
 
   // Fetch initial notes
   const fetchNotes = useCallback(async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('audio_notes')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    if (data) setNotes(data)
+    const data = await getAudioNotes(10)
+    setNotes(data)
   }, [])
 
-  // Setup realtime subscription
+  // Fetch on mount and poll for updates
   useEffect(() => {
     fetchNotes()
 
-    const supabase = createClient()
+    // Poll for updates every 5 seconds when there are pending/processing notes
+    const interval = setInterval(() => {
+      fetchNotes()
+    }, 5000)
 
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel('audio_notes_realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'audio_notes',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setNotes(prev => [payload.new as AudioNote, ...prev].slice(0, 10))
-          } else if (payload.eventType === 'UPDATE') {
-            setNotes(prev =>
-              prev.map(note =>
-                note.id === payload.new.id ? (payload.new as AudioNote) : note
-              )
-            )
-          } else if (payload.eventType === 'DELETE') {
-            setNotes(prev => prev.filter(note => note.id !== payload.old.id))
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => clearInterval(interval)
   }, [fetchNotes])
 
   // Format time as MM:SS
@@ -175,33 +143,22 @@ export default function VoiceNotesPage() {
     }
   }
 
-  // Upload audio to Supabase
+  // Upload audio
+  // TODO: Replace with Vercel Blob upload
   const uploadAudio = async (blob: Blob, mimeType: string) => {
     setIsUploading(true)
     setError(null)
 
     try {
-      const supabase = createClient()
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      // Generate unique filename
+      // TODO: Implement Vercel Blob upload
+      // For now, create a placeholder path
       const ext = mimeType.includes('webm') ? 'webm' : 'm4a'
-      const filename = `${user.id}_${Date.now()}.${ext}`
-      const path = `${user.id}/${filename}`
+      const filename = `audio_${Date.now()}.${ext}`
 
-      // Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('audio-uploads')
-        .upload(path, blob, {
-          contentType: mimeType,
-        })
-
-      if (uploadError) throw uploadError
-
-      // Create DB record
-      await createAudioNote(path)
+      // Create DB record with placeholder path
+      // In production, upload to Vercel Blob first and use the returned URL
+      await createAudioNote(filename)
+      await fetchNotes()
 
       setRecordingTime(0)
     } catch (err) {
@@ -218,19 +175,21 @@ export default function VoiceNotesPage() {
 
     try {
       await deleteAudioNote(id)
+      await fetchNotes()
     } catch (err) {
       console.error('Delete failed:', err)
     }
   }
 
   // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const year = date.getFullYear()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const mins = date.getMinutes().toString().padStart(2, '0')
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-'
+    const d = new Date(date)
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const year = d.getFullYear()
+    const hours = d.getHours().toString().padStart(2, '0')
+    const mins = d.getMinutes().toString().padStart(2, '0')
     return `${day}.${month}.${year} ${hours}:${mins}`
   }
 
@@ -340,7 +299,7 @@ export default function VoiceNotesPage() {
                         </p>
                       ) : note.status === 'error' ? (
                         <p className="text-red-400 text-sm">
-                          {note.error_message || 'Nastala chyba při přepisu'}
+                          {note.errorMessage || 'Nastala chyba při přepisu'}
                         </p>
                       ) : (
                         <div className="flex items-center gap-2 text-trail-muted text-sm">
@@ -361,7 +320,7 @@ export default function VoiceNotesPage() {
 
                       {/* Timestamp */}
                       <p className="text-trail-muted text-xs mt-3">
-                        {formatDate(note.created_at)}
+                        {formatDate(note.createdAt)}
                       </p>
                     </div>
 

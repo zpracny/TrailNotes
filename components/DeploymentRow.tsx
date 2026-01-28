@@ -13,7 +13,7 @@ interface DeploymentRowProps {
   deployment: Deployment
 }
 
-function formatLastPing(lastPing: string | null): string {
+function formatLastPing(lastPing: Date | null): string {
   if (!lastPing) return 'Nikdy'
   const date = new Date(lastPing)
   const now = new Date()
@@ -62,8 +62,8 @@ export function DeploymentRow({ deployment }: DeploymentRowProps) {
   }
 
   const handleCopy = async () => {
-    if (!deployment.url_ip) return
-    await navigator.clipboard.writeText(deployment.url_ip)
+    if (!deployment.urlIp) return
+    await navigator.clipboard.writeText(deployment.urlIp)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -88,9 +88,9 @@ export function DeploymentRow({ deployment }: DeploymentRowProps) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 mb-1">
           <span className="text-sm text-trail-muted font-mono truncate max-w-[150px]">
-            {deployment.url_ip || '-'}
+            {deployment.urlIp || '-'}
           </span>
-          {deployment.url_ip && (
+          {deployment.urlIp && (
             <button
               onClick={handleCopy}
               className="p-1 rounded hover:bg-trail-border/50 text-trail-muted hover:text-trail-text transition-colors"
@@ -116,15 +116,15 @@ export function DeploymentRow({ deployment }: DeploymentRowProps) {
         />
       </td>
       <td className="px-4 py-3">
-        <StatusBadge status={deployment.status} type="deployment" />
+        <StatusBadge status={(deployment.status as DeploymentStatus) ?? 'running'} type="deployment" />
       </td>
       <td className="px-4 py-3 text-sm text-trail-muted">
-        {formatLastPing(deployment.last_ping)}
+        {formatLastPing(deployment.lastPing)}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <select
-            value={deployment.status}
+            value={deployment.status ?? 'running'}
             onChange={(e) => handleStatusChange(e.target.value as DeploymentStatus)}
             className="text-xs bg-trail-bg border border-trail-border rounded px-2 py-1 text-trail-text focus:outline-none focus:ring-1 focus:ring-trail-accent mr-1"
           >

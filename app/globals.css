@@ -1,3 +1,4 @@
+@import '@neondatabase/auth/ui/css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,26 +11,26 @@
   --trail-muted: #94a3b8;
   --trail-accent: #10b981;
 
-  /* Neon Auth UI (shadcn) theming */
-  --background: 222.2 47.4% 11.2%;
-  --foreground: 210 40% 98%;
-  --card: 217.2 32.6% 17.5%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 47.4% 11.2%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 160 84% 39%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 215 19.3% 34.5%;
-  --input: 215 19.3% 34.5%;
-  --ring: 160 84% 39%;
+  /* Neon Auth UI theming (OKLCH) */
+  --background: oklch(0.205 0.015 255);
+  --foreground: oklch(0.97 0.005 255);
+  --card: oklch(0.27 0.015 250);
+  --card-foreground: oklch(0.97 0.005 255);
+  --popover: oklch(0.205 0.015 255);
+  --popover-foreground: oklch(0.97 0.005 255);
+  --primary: oklch(0.696 0.17 163);
+  --primary-foreground: oklch(0.97 0.005 255);
+  --secondary: oklch(0.27 0.015 250);
+  --secondary-foreground: oklch(0.97 0.005 255);
+  --muted: oklch(0.27 0.015 250);
+  --muted-foreground: oklch(0.7 0.02 250);
+  --accent: oklch(0.27 0.015 250);
+  --accent-foreground: oklch(0.97 0.005 255);
+  --destructive: oklch(0.45 0.15 27);
+  --destructive-foreground: oklch(0.97 0.005 255);
+  --border: oklch(0.38 0.015 250);
+  --input: oklch(0.38 0.015 250);
+  --ring: oklch(0.696 0.17 163);
   --radius: 0.75rem;
 }
 

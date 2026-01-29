@@ -15,14 +15,14 @@ git commit -m "Initial commit"
 ### 2. Vytvoř GitHub repo
 ```
 1. github.com → New repository
-2. Název: trailnotes (nebo jiný)
+2. Název: TrailNotes
 3. NEVYTVÁŘEJ README (už máme)
 4. Zkopíruj URL repozitáře
 ```
 
 ### 3. Propoj a pushni
 ```bash
-git remote add origin https://github.com/TVUJ_USERNAME/trailnotes.git
+git remote add origin https://github.com/TVUJ_USERNAME/TrailNotes.git
 git branch -M main
 git push -u origin main
 ```
@@ -30,11 +30,12 @@ git push -u origin main
 ### 4. Deploy na Vercel
 ```
 1. vercel.com → Add New Project
-2. Import Git Repository → vyber trailnotes
+2. Import Git Repository → vyber TrailNotes
 3. Environment Variables → přidej:
-   - NEXT_PUBLIC_SUPABASE_URL
-   - NEXT_PUBLIC_SUPABASE_ANON_KEY
-   - SUPABASE_SERVICE_ROLE_KEY
+   - DATABASE_URL
+   - NEON_AUTH_BASE_URL
+   - BETTER_AUTH_URL (= produkční URL)
+   - NEXT_PUBLIC_APP_URL (= produkční URL)
    - ADMIN_EMAIL
 4. Deploy
 ```
@@ -46,55 +47,35 @@ git push -u origin main
 3. Nastav DNS u registrátora
 ```
 
-### 6. Aktualizuj Supabase URLs
-```
-Authentication → URL Configuration:
-- Site URL: https://trailnotes.pracny.app
-- Redirect URLs: https://trailnotes.pracny.app/auth/callback
-```
-
 ---
 
 ## Pro novou instalaci
 
-### 1. Supabase
+### 1. Neon
 ```
-1. Vytvoř projekt na supabase.com
-2. SQL Editor → spusť supabase/schema.sql
-3. Authentication → Providers → Google → Enable
-4. Zkopíruj API klíče z Project Settings → API
-```
-
-### 2. Google OAuth
-```
-1. console.cloud.google.com → Credentials → Create OAuth client
-2. Redirect URI: https://XXX.supabase.co/auth/v1/callback
-3. Zkopíruj Client ID + Secret do Supabase
+1. Vytvoř projekt na console.neon.tech
+2. Zapni Neon Auth (Auth tab)
+3. Povol Google OAuth v Auth → Settings
+4. SQL Editor → spusť neon/schema.sql
+5. Zkopíruj DATABASE_URL a NEON_AUTH_BASE_URL
 ```
 
-### 3. Lokální vývoj
+### 2. Lokální vývoj
 ```bash
 npm install
-cp .env.local.example .env.local
-# Doplň klíče do .env.local
+# Vytvoř .env.local s klíči z Neon konzole
 npm run dev
 ```
 
-### 4. Vercel deploy
+> Google OAuth nefunguje na localhost se sdílenými klíči Neon Auth.
+> Pro testování auth deployni na Vercel.
+
+### 3. Vercel deploy
 ```
 1. Push na GitHub
 2. Import do Vercel
 3. Přidej env variables
-4. V Supabase přidej produkční URL
-```
-
----
-
-## Pro upgrade existující DB
-
-Spusť v Supabase SQL Editor:
-```
-supabase/migration-v2.sql
+4. BETTER_AUTH_URL a NEXT_PUBLIC_APP_URL = tvoje Vercel URL
 ```
 
 ---
@@ -102,9 +83,17 @@ supabase/migration-v2.sql
 ## Environment variables
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+# Neon Database (z Neon Console → Connection Details)
+DATABASE_URL=postgresql://neondb_owner:xxx@ep-xxx-pooler.xxx.neon.tech/neondb?sslmode=require
+
+# Neon Auth (z Neon Console → Auth tab)
+NEON_AUTH_BASE_URL=https://ep-xxx.neonauth.xxx.neon.tech/neondb/auth
+
+# App URLs (localhost pro dev, produkční URL pro Vercel)
+BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Admin
 ADMIN_EMAIL=tvuj@email.com
 ```
 
@@ -127,6 +116,7 @@ ADMIN_EMAIL=tvuj@email.com
 | Soubor | Obsah |
 |--------|-------|
 | `README.md` | Kompletní dokumentace |
-| `supabase/schema.sql` | Celé DB schéma pro novou instalaci |
-| `supabase/migration-v2.sql` | Upgrade existující DB |
-| `.env.local.example` | Šablona pro env variables |
+| `neon/schema.sql` | Celé DB schéma pro novou instalaci |
+| `neon/import-data.sql` | Migrace dat ze Supabase |
+| `lib/db/schema.ts` | Drizzle ORM schema definice |
+| `lib/auth/` | Neon Auth klient a server |

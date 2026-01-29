@@ -9,6 +9,28 @@
   --trail-text: #f8fafc;
   --trail-muted: #94a3b8;
   --trail-accent: #10b981;
+
+  /* Neon Auth UI (shadcn) theming */
+  --background: 222.2 47.4% 11.2%;
+  --foreground: 210 40% 98%;
+  --card: 217.2 32.6% 17.5%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 47.4% 11.2%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 215 19.3% 34.5%;
+  --input: 215 19.3% 34.5%;
+  --ring: 160 84% 39%;
+  --radius: 0.75rem;
 }
 
 body {

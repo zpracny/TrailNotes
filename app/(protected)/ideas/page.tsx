@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { IdeaCard } from '@/components/IdeaCard'
 import { TagChip, SUGGESTED_TAGS } from '@/components/TagChip'
-import { exportIdeasCSV } from '@/actions/ideas'
+import { getIdeas, exportIdeasCSV } from '@/actions/ideas'
 import type { Idea, IdeaStatus } from '@/lib/supabase/types'
 import {
   Plus,
@@ -26,35 +25,15 @@ export default function IdeasPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   useEffect(() => {
-    const supabase = createClient()
-
-    const fetchIdeas = async () => {
-      const { data } = await supabase
-        .from('ideas')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (data) setIdeas(data)
+    const fetchData = async () => {
+      const data = await getIdeas()
+      setIdeas(data)
       setLoading(false)
     }
 
-    fetchIdeas()
-
-    // Realtime subscription
-    const channel = supabase
-      .channel('ideas_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'ideas' },
-        () => {
-          fetchIdeas()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const filteredIdeas = useMemo(() => {

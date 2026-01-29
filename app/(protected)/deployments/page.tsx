@@ -2,9 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { DeploymentRow } from '@/components/DeploymentRow'
-import { pingAllDeployments } from '@/actions/deployments'
+import { getDeployments, pingAllDeployments } from '@/actions/deployments'
 import type { Deployment, DeploymentStatus, Platform } from '@/lib/supabase/types'
 import {
   Plus,
@@ -25,35 +24,15 @@ export default function DeploymentsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'last_ping' | 'created_at'>('created_at')
 
   useEffect(() => {
-    const supabase = createClient()
-
-    const fetchDeployments = async () => {
-      const { data } = await supabase
-        .from('deployments')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (data) setDeployments(data)
+    const fetchData = async () => {
+      const data = await getDeployments()
+      setDeployments(data)
       setLoading(false)
     }
 
-    fetchDeployments()
-
-    // Realtime subscription
-    const channel = supabase
-      .channel('deployments_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'deployments' },
-        () => {
-          fetchDeployments()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const filteredDeployments = useMemo(() => {
